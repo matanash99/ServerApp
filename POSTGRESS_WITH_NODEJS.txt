@@ -1,0 +1,208 @@
+
+PART 1 deploy github:
+=====================
+
+GO TO RENDER CREATE NEW DB name it mvc-db
+
+1) add .gitignore:
+     node_modules
+     db.sqlite
+    .env
+	
+-----------------------------------------------------	
+2) set port to be not hardcoded
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+	
+-----------------------------------------------------
+3) init Commit And Push to github GitHUB REPo 
+-----------------------------------------------------
+4) Check its working 
+-----------------------------------------------------
+5)Deploy to render WITH SQLITE (אם יש זמן)
+-----------------------------------------------------
+  
+PART 2: upgrade to POSTGRESS DB:
+===============================
+
+1) Create DB instance in render
+-------------------------------
+
+2)
+1)Create a new file named .env
+# Get this URL from Render Dashboard -> Postgres -> Connect -> External Connection
+DATABASE_URL= postgres External Connection
+PORT=3000
+----------------------------------
+
+3) 
+npm uninstall sqlite3
+npm install pg dotenv
+--------------------------------
+
+4) updated db.js to create DB (with role column)
+
+config/db.js
+
+// Load local .env file only if running locally
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config();
+}
+
+const { Pool } = require("pg");
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  // SSL is required for Render. 'rejectUnauthorized: false' allows
+  // connecting from your local PC to the hosted DB without certificate errors.
+  ssl: {
+    rejectUnauthorized: false
+  }
+});
+
+const createTableQuery = `
+    CREATE TABLE IF NOT EXISTS Users (
+      id SERIAL PRIMARY KEY,
+      email VARCHAR(255) UNIQUE NOT NULL,
+      fullname VARCHAR(255) NOT NULL,
+      passwordhash TEXT NOT NULL,
+      role VARCHAR(50) NOT NULL DEFAULT 'user', 
+      createdat VARCHAR(255) NOT NULL
+    );
+`;
+
+pool.query(createTableQuery)
+  .then(() => console.log("PostgreSQL Connected & Table Verified."))
+  .catch((err) => console.error("DB Connection Error:", err));
+
+module.exports = {
+  query: (text, params) => pool.query(text, params),
+};
+--------------------------------------------------------
+5) update repo
+
+const db = require("../config/db");
+const User = require("../models/user");
+
+class UserRepository {
+  _mapToModel(row) {
+    if (!row) return null;
+    return new User({
+      id: row.id,
+      email: row.email,
+      fullName: row.fullname,
+      passwordHash: row.passwordhash,
+      role: row.role,            // NEW: Map lowercase DB column to App Model
+      createdAt: row.createdat
+    });
+  }
+
+  // ... findByEmail and findById remain the same (they use _mapToModel) ...
+  async findByEmail(email) {
+    const result = await db.query('SELECT * FROM Users WHERE email = $1', [email]);
+    return this._mapToModel(result.rows[0]);
+  }
+
+  async findById(id) {
+    const result = await db.query('SELECT * FROM Users WHERE id = $1', [id]);
+    return this._mapToModel(result.rows[0]);
+  }
+
+  // Updated Create Method
+  async create({ email, fullName, passwordHash, role = 'user' }) {
+    const createdAt = new Date().toISOString();
+
+    const result = await db.query(
+      `INSERT INTO Users (email, fullname, passwordhash, role, createdat) 
+       VALUES ($1, $2, $3, $4, $5) 
+       RETURNING *`,
+      [email, fullName, passwordHash, role, createdAt]
+    );
+
+    return this._mapToModel(result.rows[0]);
+  }
+}
+
+module.exports = new UserRepository();
+
+
+----------------------------------------------------------
+async register({ email, fullName, password, role = 'user' }) {
+        const existing = await userRepo.findByEmail(email);
+        if (existing) {
+            throw new Error("Email already registered.");
+        }
+
+        const passwordHash = await bcrypt.hash(password, 12);
+        
+        // Pass the role to the repository
+        const user = await userRepo.create({ email, fullName, passwordHash, role });
+        return user;
+    }
+
+-------------------------------------------------------
+
+const db = require("../config/db");
+const User = require("../models/user");
+
+class UserRepository {
+  _mapToModel(row) {
+    if (!row) return null;
+    return new User({
+      id: row.id,
+      email: row.email,
+      fullName: row.fullname,
+      passwordHash: row.passwordhash,
+      role: row.role,            // NEW: Map lowercase DB column to App Model
+      createdAt: row.createdat
+    });
+  }
+
+  // ... findByEmail and findById remain the same (they use _mapToModel) ...
+  async findByEmail(email) {
+    const result = await db.query('SELECT * FROM Users WHERE email = $1', [email]);
+    return this._mapToModel(result.rows[0]);
+  }
+
+  async findById(id) {
+    const result = await db.query('SELECT * FROM Users WHERE id = $1', [id]);
+    return this._mapToModel(result.rows[0]);
+  }
+
+  // Updated Create Method
+  async create({ email, fullName, passwordHash, role = 'user' }) {
+    const createdAt = new Date().toISOString();
+
+    const result = await db.query(
+      `INSERT INTO Users (email, fullname, passwordhash, role, createdat) 
+       VALUES ($1, $2, $3, $4, $5) 
+       RETURNING *`,
+      [email, fullName, passwordHash, role, createdAt]
+    );
+
+    return this._mapToModel(result.rows[0]);
+  }
+}
+
+module.exports = new UserRepository();
+
+-------------------------------------------------------------------------------------------------------------
+class User {
+    // Add 'role' to the constructor destructuring
+    constructor({ id, email, fullName, passwordHash, role, createdAt }) {
+        this.id = id;
+        this.email = email;
+        this.fullName = fullName;
+        this.passwordHash = passwordHash;
+        this.role = role || 'user'; // Default to 'user' if missing
+        this.createdAt = createdAt;
+    }
+}
+
+module.exports = User;
+
+-------------------------------------------------------------------------
+
+
+
