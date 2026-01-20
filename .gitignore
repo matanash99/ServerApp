@@ -1,0 +1,7 @@
+node_modules/
+
+ADMINPAGE.txt
+POSTGRESS_WITH_NODEJS.txt
+db.sqlite
+sessions.sqlite
+.env
