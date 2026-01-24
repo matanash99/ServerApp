@@ -16,7 +16,7 @@ db.serialize(() => {
     )
   `);
 
-    [cite_start]// 2. NEW: Favorites Table [cite: 1]
+    // 2. Favorites Table
     db.run(`
     CREATE TABLE IF NOT EXISTS Favorites (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
