@@ -3,6 +3,7 @@ const path = require("path");
 const sessionMiddleware = require("./config/session");
 const authRoutes = require("./routes/authRoutes");
 const requireAuth = require("./middleware/requireAuth");
+const videoRoutes = require("./routes/videoRoutes");
 
 const app = express();
 
@@ -35,5 +36,11 @@ app.use((req, res) => {
     res.status(404).send("Not Found");
 });
 
-const PORT = 3000;
-app.listen(PORT, () => console.log(`http://localhost:${PORT}`));
+// video routes
+app.use("/videos", videoRoutes);
+
+
+
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT} updated`));
