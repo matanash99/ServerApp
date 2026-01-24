@@ -2,68 +2,70 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>My YouTube Favorites</title>
+    <title>My Videos</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/css/glass.css" rel="stylesheet">
 </head>
-<body class="bg-light">
+<body>
 
-    <nav class="navbar navbar-dark bg-dark mb-4">
+    <nav class="navbar navbar-light navbar-glass fixed-top">
         <div class="container">
-            <span class="navbar-brand">YouTube Manager</span>
+            <a class="navbar-brand fw-bold" href="/">MVC App</a>
             <div>
-                <span class="text-white me-3">Hello, <%= user.fullName %></span>
-                <form action="/logout" method="POST" style="display:inline;">
-                     <button class="btn btn-outline-light btn-sm">Logout</button>
-                </form>
+                 <a href="/" class="btn btn-sm btn-outline-dark rounded-pill me-2">Home</a>
+                 <form action="/auth/logout" method="POST" style="display:inline;">
+                    <button class="btn btn-sm btn-dark rounded-pill">Logout</button>
+                 </form>
             </div>
         </div>
     </nav>
 
-    <div class="container">
-        <div class="card mb-5 shadow-sm">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">Search YouTube</h5>
+    <div class="container" style="margin-top: 100px;">
+        
+        <div class="glass-card mb-5">
+            <h3 class="fw-bold mb-3">Add New Video</h3>
+            <div class="input-group mb-3">
+                <input type="text" id="searchInput" class="form-control form-control-lg" placeholder="Paste YouTube Link or ID...">
+                <button class="btn btn-primary px-4" type="button" onclick="searchVideo()">Search</button>
             </div>
-            <div class="card-body">
-                <div class="input-group mb-3">
-                    <input type="text" id="searchInput" class="form-control" placeholder="Paste a YouTube Video ID (e.g., dQw4w9WgXcQ)">
-                    <button class="btn btn-primary" type="button" onclick="searchVideo()">Search</button>
-                </div>
-                
-                <div id="searchResult" class="d-none border p-3 rounded text-center">
-                    <h5 id="resultTitle">Video Title</h5>
-                    <img id="resultThumb" src="" alt="Thumbnail" class="img-fluid mb-3" style="max-width: 300px;">
-                    
-                    <form action="/videos/add" method="POST">
+
+            <div id="searchResult" class="d-none mt-4 text-center">
+                <div class="p-3 bg-white bg-opacity-50 rounded-4 d-inline-block">
+                    <h5 id="resultTitle" class="fw-bold">Video Title</h5>
+                    <img id="resultThumb" src="" alt="Thumbnail" class="rounded-3 shadow-sm mb-3" style="max-width: 250px;">
+                    <br>
+                    <form action="/videos/add" method="POST" class="d-inline">
                         <input type="hidden" name="youtubeId" id="inputYoutubeId">
                         <input type="hidden" name="title" id="inputTitle">
                         <input type="hidden" name="thumbnailUrl" id="inputThumb">
-                        <button type="submit" class="btn btn-success">Add to Favorites</button>
+                        <button type="submit" class="btn btn-success rounded-pill px-4">Save to Favorites</button>
                     </form>
                 </div>
             </div>
         </div>
 
-        <h3 class="mb-3">My Favorites</h3>
+        <h3 class="fw-bold text-white mb-4" style="text-shadow: 0 2px 4px rgba(0,0,0,0.1);">My Playlist</h3>
+        
         <div class="row">
             <% if (favorites.length === 0) { %>
-                <div class="col-12"><p class="text-muted">No favorite videos yet.</p></div>
+                <div class="col-12 text-center">
+                    <div class="glass-card p-4">
+                        <p class="mb-0 text-muted">No videos saved yet.</p>
+                    </div>
+                </div>
             <% } %>
 
             <% favorites.forEach(video => { %>
                 <div class="col-md-4 mb-4">
-                    <div class="card h-100 shadow-sm">
-                        <img src="<%= video.thumbnailUrl %>" class="card-img-top" alt="thumb">
-                        <div class="card-body">
-                            <h5 class="card-title text-truncate"><%= video.title %></h5>
-                            <div class="ratio ratio-16x9 mb-3">
-                                <iframe src="https://www.youtube.com/embed/<%= video.youtubeId %>" allowfullscreen></iframe>
-                            </div>
-                            <form action="/videos/delete" method="POST">
-                                <input type="hidden" name="id" value="<%= video.id %>">
-                                <button class="btn btn-danger w-100">Remove</button>
-                            </form>
+                    <div class="glass-card h-100 p-3 d-flex flex-column">
+                        <div class="ratio ratio-16x9 mb-3 rounded-3 overflow-hidden shadow-sm">
+                            <iframe src="https://www.youtube.com/embed/<%= video.youtubeId %>" allowfullscreen></iframe>
                         </div>
+                        <h6 class="fw-bold mb-3 text-truncate"><%= video.title %></h6>
+                        <form action="/videos/delete" method="POST" class="mt-auto">
+                            <input type="hidden" name="id" value="<%= video.id %>">
+                            <button class="btn btn-outline-danger w-100 rounded-pill btn-sm">Remove</button>
+                        </form>
                     </div>
                 </div>
             <% }) %>
@@ -71,11 +73,8 @@
     </div>
 
     <script>
-        // Simple client-side script to "simulate" a search result 
-        // In a real app, you would fetch from YouTube API here.
         function searchVideo() {
             const query = document.getElementById('searchInput').value;
-            // logic to handle a full URL or just an ID
             let videoId = query;
             if(query.includes('v=')) {
                 videoId = query.split('v=')[1].split('&')[0];
@@ -85,17 +84,13 @@
 
             if (!videoId) return alert("Please enter a valid ID or URL");
 
-            // Mocking the data (Since we don't have a live API key in this code block)
-            // It will generate the thumbnail URL automatically based on ID.
-            const title = "YouTube Video (" + videoId + ")";
+            const title = "New Video (" + videoId + ")";
             const thumb = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
 
-            // Update UI
             document.getElementById('resultTitle').innerText = title;
             document.getElementById('resultThumb').src = thumb;
             document.getElementById('searchResult').classList.remove('d-none');
 
-            // Fill hidden form
             document.getElementById('inputYoutubeId').value = videoId;
             document.getElementById('inputTitle').value = title;
             document.getElementById('inputThumb').value = thumb;

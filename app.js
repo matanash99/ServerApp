@@ -12,6 +12,11 @@ const app = express();
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 
+//css and static files
+app.use(express.static("public"));
+app.use(express.urlencoded({ extended: true }));
+
+
 // body parsing
 app.use(express.urlencoded({ extended: true }));
 
@@ -28,7 +33,7 @@ app.use((req, res, next) => {
 });
 
 // routes
-app.use(authRoutes);
+app.use("/auth", authRoutes);
 
 // --- 2. Register the Video Routes ---
 // This makes the link /videos work
