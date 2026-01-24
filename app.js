@@ -4,6 +4,7 @@ const sessionMiddleware = require("./config/session");
 const authRoutes = require("./routes/authRoutes");
 const requireAuth = require("./middleware/requireAuth");
 const videoRoutes = require("./routes/videoRoutes");
+const noCache = require("./middleware/noCache");
 
 const app = express();
 
@@ -16,6 +17,9 @@ app.use(express.urlencoded({ extended: true }));
 
 // sessions
 app.use(sessionMiddleware);
+app.use(noCache); // to prevent caching of protected pages
+
+
 
 // make user available in views
 app.use((req, res, next) => {
@@ -26,6 +30,10 @@ app.use((req, res, next) => {
 // routes
 app.use(authRoutes);
 
+// --- 2. Register the Video Routes ---
+// This makes the link /videos work
+app.use("/videos", videoRoutes);
+
 // protected home
 app.get("/", requireAuth, (req, res) => {
     res.render("home", { user: req.session.user });
@@ -35,12 +43,6 @@ app.get("/", requireAuth, (req, res) => {
 app.use((req, res) => {
     res.status(404).send("Not Found");
 });
-
-// video routes
-app.use("/videos", videoRoutes);
-
-
-
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT} updated`));
