@@ -24,8 +24,6 @@ app.use(express.urlencoded({ extended: true }));
 app.use(sessionMiddleware);
 app.use(noCache); // to prevent caching of protected pages
 
-
-
 // make user available in views
 app.use((req, res, next) => {
     res.locals.user = req.session.user || null;
@@ -35,8 +33,7 @@ app.use((req, res, next) => {
 // routes
 app.use("/auth", authRoutes);
 
-// --- 2. Register the Video Routes ---
-// This makes the link /videos work
+// videos
 app.use("/videos", videoRoutes);
 
 // protected home
