@@ -5,6 +5,15 @@
     <title>My Videos</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="/css/glass.css" rel="stylesheet">
+    <style>
+        /* Small tweaks for the dynamic results */
+        .video-thumb {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            border-radius: 12px;
+        }
+    </style>
 </head>
 <body>
 
@@ -22,46 +31,36 @@
 
     <div class="container" style="margin-top: 100px;">
         
-        <div class="glass-card mb-5">
-            <h3 class="fw-bold mb-3">Add New Video</h3>
+        <div class="glass-card mb-5 p-4">
+            <h3 class="fw-bold mb-3">Find Videos</h3>
             <div class="input-group mb-3">
-                <input type="text" id="searchInput" class="form-control form-control-lg" placeholder="Paste YouTube Link or ID...">
-                <button class="btn btn-primary px-4" type="button" onclick="searchVideo()">Search</button>
+                <input type="text" id="searchInput" class="form-control form-control-lg rounded-pill-start" placeholder="Search YouTube (e.g. 'Funny Cats')...">
+                <button class="btn btn-primary px-4 rounded-pill-end" type="button" onclick="searchYouTube()">Search 🔍</button>
             </div>
 
-            <div id="searchResult" class="d-none mt-4 text-center">
-                <div class="p-3 bg-white bg-opacity-50 rounded-4 d-inline-block">
-                    <h5 id="resultTitle" class="fw-bold">Video Title</h5>
-                    <img id="resultThumb" src="" alt="Thumbnail" class="rounded-3 shadow-sm mb-3" style="max-width: 250px;">
-                    <br>
-                    <form action="/videos/add" method="POST" class="d-inline">
-                        <input type="hidden" name="youtubeId" id="inputYoutubeId">
-                        <input type="hidden" name="title" id="inputTitle">
-                        <input type="hidden" name="thumbnailUrl" id="inputThumb">
-                        <button type="submit" class="btn btn-success rounded-pill px-4">Save to Favorites</button>
-                    </form>
-                </div>
-            </div>
+            <div id="resultsArea" class="row g-4 mt-2"></div>
         </div>
 
         <h3 class="fw-bold text-white mb-4" style="text-shadow: 0 2px 4px rgba(0,0,0,0.1);">My Playlist</h3>
         
-        <div class="row">
+        <div class="row g-4">
             <% if (favorites.length === 0) { %>
                 <div class="col-12 text-center">
                     <div class="glass-card p-4">
-                        <p class="mb-0 text-muted">No videos saved yet.</p>
+                        <p class="mb-0 text-muted">No videos saved yet. Search above to start!</p>
                     </div>
                 </div>
             <% } %>
 
             <% favorites.forEach(video => { %>
-                <div class="col-md-4 mb-4">
+                <div class="col-md-4">
                     <div class="glass-card h-100 p-3 d-flex flex-column">
                         <div class="ratio ratio-16x9 mb-3 rounded-3 overflow-hidden shadow-sm">
-                            <iframe src="https://www.youtube.com/embed/<%= video.youtubeId %>" allowfullscreen></iframe>
+                            <iframe src="https://www.youtube.com/embed/<%= video.videoId %>" allowfullscreen></iframe>
                         </div>
+                        
                         <h6 class="fw-bold mb-3 text-truncate"><%= video.title %></h6>
+                        
                         <form action="/videos/delete" method="POST" class="mt-auto">
                             <input type="hidden" name="id" value="<%= video.id %>">
                             <button class="btn btn-outline-danger w-100 rounded-pill btn-sm">Remove</button>
@@ -73,27 +72,61 @@
     </div>
 
     <script>
-        function searchVideo() {
+        async function searchYouTube() {
             const query = document.getElementById('searchInput').value;
-            let videoId = query;
-            if(query.includes('v=')) {
-                videoId = query.split('v=')[1].split('&')[0];
-            } else if (query.includes('youtu.be/')) {
-                videoId = query.split('youtu.be/')[1];
+            const resultsDiv = document.getElementById('resultsArea');
+            
+            if (!query) return alert("Please enter a search term");
+
+            // 1. Show Loading State
+            resultsDiv.innerHTML = `
+                <div class="col-12 text-center text-white">
+                    <div class="spinner-border" role="status"></div>
+                    <p class="mt-2">Searching YouTube...</p>
+                </div>`;
+
+            try {
+                // 2. Call Backend API
+                const res = await fetch(`/videos/search?q=${encodeURIComponent(query)}`);
+                const videos = await res.json();
+
+                resultsDiv.innerHTML = ''; // Clear loading
+
+                if (!videos || videos.length === 0 || videos.error) {
+                    resultsDiv.innerHTML = `<div class="col-12 text-center glass-card p-3 text-danger">No results found or API Error.</div>`;
+                    return;
+                }
+
+                // 3. Generate Glass Cards for Results
+                videos.forEach(video => {
+                    const videoId = video.id.videoId;
+                    if (!videoId) return; // Skip channels/playlists
+
+                    const title = video.snippet.title;
+                    const thumb = video.snippet.thumbnails.medium.url;
+
+                    const cardHTML = `
+                        <div class="col-md-4">
+                            <div class="glass-card h-100 p-3">
+                                <img src="${thumb}" class="video-thumb mb-3 shadow-sm" alt="${title}">
+                                <h6 class="fw-bold mb-3 text-truncate" title="${title}">${title}</h6>
+                                
+                                <form action="/videos/add" method="POST">
+                                    <input type="hidden" name="youtubeId" value="${videoId}">
+                                    <input type="hidden" name="title" value="${title}">
+                                    <input type="hidden" name="thumbnailUrl" value="${thumb}">
+                                    <button class="btn btn-success btn-sm w-100 rounded-pill shadow-sm">Add to Favorites +</button>
+                                </form>
+                            </div>
+                        </div>
+                    `;
+                    resultsDiv.innerHTML += cardHTML;
+                });
+
+            } catch (err) {
+                console.error(err);
+                resultsDiv.innerHTML = '<div class="col-12 text-center text-danger glass-card p-3">Error connecting to server.</div>';
             }
-
-            if (!videoId) return alert("Please enter a valid ID or URL");
-
-            const title = "New Video (" + videoId + ")";
-            const thumb = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-
-            document.getElementById('resultTitle').innerText = title;
-            document.getElementById('resultThumb').src = thumb;
-            document.getElementById('searchResult').classList.remove('d-none');
-
-            document.getElementById('inputYoutubeId').value = videoId;
-            document.getElementById('inputTitle').value = title;
-            document.getElementById('inputThumb').value = thumb;
         }
     </script>
 </body>

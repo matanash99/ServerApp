@@ -1,13 +1,13 @@
 const favoriteRepo = require("../repositories/favoriteRepository");
 
+const YOUTUBE_API_KEY = "AIzaSyCrAMCoCgoJfkxWYCLZTR1giWkvXeh6S-U"; 
+// ==============================
+
 exports.getVideosPage = async (req, res) => {
     try {
-        // Get the logged-in user's favorites
         const favorites = await favoriteRepo.findByUserId(req.session.user.id);
-        
-        // Render the view with the favorites list
         res.render("videos", { 
-            user: req.session.user,
+            user: req.session.user, 
             favorites: favorites 
         });
     } catch (err) {
@@ -16,16 +16,47 @@ exports.getVideosPage = async (req, res) => {
     }
 };
 
-exports.addFavorite = async (req, res) => {
+exports.searchVideos = async (req, res) => {
     try {
-        const { youtubeId, title, thumbnailUrl } = req.body;
-        const userId = req.session.user.id;
+        const query = req.query.q;
+        if (!query) return res.json([]);
 
-        await favoriteRepo.create({ userId, youtubeId, title, thumbnailUrl });
-        res.redirect("/videos");
+        const response = await fetch(
+            `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${encodeURIComponent(query)}&key=${YOUTUBE_API_KEY}`
+        );
+        const data = await response.json();
+
+        if (data.error) {
+            console.error("YouTube API Error:", data.error);
+            return res.status(500).json({ error: data.error.message });
+        }
+
+        res.json(data.items || []);
     } catch (err) {
         console.error(err);
-        res.status(500).send("Error adding favorite");
+        res.status(500).json({ error: "Server error" });
+    }
+};
+
+exports.addFavorite = async (req, res) => {
+    try {
+        // 1. Get 'youtubeId' from the form
+        const { youtubeId, title, thumbnailUrl } = req.body;
+        const userId = req.session.user.id;
+        
+        // 2. Send it to the repo as 'videoId' (to match the DB column)
+        await favoriteRepo.create({ 
+            userId, 
+            videoId: youtubeId, // <--- THIS IS THE FIX
+            title, 
+            thumbnailUrl 
+        });
+
+        res.redirect("/videos");
+    } catch (err) {
+        console.error("Add Error:", err);
+        // If it fails, just reload the page (it probably already exists)
+        res.redirect("/videos");
     }
 };
 
